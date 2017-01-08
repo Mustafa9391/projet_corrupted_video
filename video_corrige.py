@@ -11,7 +11,7 @@ import sample
 # Script permet de decouper le video en images
 def decoupe_video(video):
     print'--Decomposition de video ...'
-    # vérifier l'existance de dossier frames dans lequel on va stocker les images, s'il n'existe pas on va le créer,
+    # verifier l'existance de dossier frames dans lequel on va stocker les images, s'il n'existe pas on va le creer,
     # sinon il faut le vider pour qu'il soit pret
     if not os.path.exists('frames'):
         os.makedirs('frames')
@@ -51,7 +51,7 @@ def mse(imageA, imageB):
 def compare_images(imageA, imageB):
     image1 = cv2.imread(imageA)
     image2 = cv2.imread(imageB)
-    # on transforme les images en COLOR_BGR2GRAY pour facilité le calcule et pour qu'il soit plus rapide
+    # on transforme les images en COLOR_BGR2GRAY pour facilite le calcule et pour qu'il soit plus rapide
     image1_gray = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
     image2_gray = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
     # calculer l'erreur entre les 2 images :
@@ -70,7 +70,7 @@ def supprimer_bruit(tab):
     return tab_sans_bruit
 
 
-# Créer la matrice qui contiendra la distance entre chaque images et les autres
+# Creer la matrice qui contiendra la distance entre chaque images et les autres
 def matrix_distance(number_images):
     matrix1 = [[0] * number_images for i in range(number_images)]
     print '--Reorganiser les images ...'
@@ -95,12 +95,12 @@ def trier_images(matrix, number_images):
         # trouver l'image la l'erreur le plus faible avec l'image i, et on recupere son indice
         ind, val = heapq.nsmallest(k, enumerate(matrix[tab_trier[i - 1]]), itemgetter(1))[-1]
         while ajout == False:
-            # si l'image n'existe pas déja dans le tableau on l'ajoute
+            # si l'image n'existe pas deja dans le tableau on l'ajoute
             if ind not in tab_trier and ind != i:
                 tab_trier.append(ind)
                 ajout = True
             else:
-                # si l'image existe déja dans le tableau on cherche l'image suivante avec l'erreur le plus faible
+                # si l'image existe deja dans le tableau on cherche l'image suivante avec l'erreur le plus faible
                 k += 1
                 ind, val = heapq.nsmallest(k, enumerate(matrix[tab_trier[i - 1]]), itemgetter(1))[-1]
     return tab_trier
@@ -119,7 +119,7 @@ def trouver_premier_frame(tab_sans_bruit):
         tab_dist.append(abs(dist1 - dist2))
     # recuperer l'index de l'image autour de laquelle il y'a l'erreur le plus grand
     ind, val = heapq.nlargest(1, enumerate(tab_dist), itemgetter(1))[-1]
-    # déplacer les images qui se trouve apres l'index pour organiser le video
+    # deplacer les images qui se trouve apres l'index pour organiser le video
     tab_org = tab_sans_bruit[ind + 1:len(tab_sans_bruit)] + tab_sans_bruit[0:ind + 1]
 
     return tab_org
@@ -137,7 +137,7 @@ def recreer_video(tab_video):
     size = None
     fourcc = cv2.cv.CV_FOURCC(*'XVID')
     vid = None
-    # recréer le video corriger avec le nom video_corrige.avi
+    # recreer le video corriger avec le nom video_corrige.avi
     for i in range(0, len(tab_final) - 1):
         k = tab_final[i]
         img = imread('./frames/frame%d.jpg' % k)
