@@ -1,7 +1,7 @@
-# programme pour corriger les video corrompues automatiquement.
+# programme pour corriger automatiquement les video corrompues.
 
 _projet développer en language Python.
-_pour recréer une nouvelle vidéo taper la commande : 
+pour recréer une nouvelle vidéo taper la commande : 
 
 python video_corrige.py -v "Nom de video"
 
