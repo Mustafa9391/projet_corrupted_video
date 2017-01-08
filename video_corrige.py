@@ -5,7 +5,7 @@ import cv2
 import heapq
 import os
 from operator import itemgetter
-import sample
+import clustering
 
 
 # Script permet de decouper le video en images
