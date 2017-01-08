@@ -1,17 +1,18 @@
 # import the necessary packages
 import argparse
-
 import numpy as np
 import cv2
 import heapq
 import os
 from operator import itemgetter
-
 import sample
 
 
+# Script permet de decouper le video en images
 def decoupe_video(video):
     print'--Decomposition de video ...'
+    # vérifier l'existance de dossier frames dans lequel on va stocker les images, s'il n'existe pas on va le créer,
+    # sinon il faut le vider pour qu'il soit pret
     if not os.path.exists('frames'):
         os.makedirs('frames')
     else:
@@ -20,6 +21,7 @@ def decoupe_video(video):
             os.remove('frames' + '/' + files[i])
 
     try:
+        # capture de video
         cap = cv2.VideoCapture(video)
         count = 0
         while cap.isOpened():
@@ -39,6 +41,7 @@ def decoupe_video(video):
         pass
 
 
+# on calcule l'erreur mse (Mean Square Error) entre 2 images
 def mse(imageA, imageB):
     err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
     err /= float(imageA.shape[0] * imageA.shape[1])
@@ -48,34 +51,84 @@ def mse(imageA, imageB):
 def compare_images(imageA, imageB):
     image1 = cv2.imread(imageA)
     image2 = cv2.imread(imageB)
+    # on transforme les images en COLOR_BGR2GRAY pour facilité le calcule et pour qu'il soit plus rapide
     image1_gray = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
     image2_gray = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
+    # calculer l'erreur entre les 2 images :
     m = mse(image1_gray, image2_gray)
     return m
 
 
+# suppression de bruit en utilisant machine learning,
 def supprimer_bruit(tab):
+    # recuperer les images etranges dans la liste des images
     tab_bruit = sample.trouver_images_bruit()
     s = set(tab_bruit)
+    # enlever les images de la liste
     tab_sans_bruit = [x for x in tab if x not in s]
+    # retourner les images sans bruit
     return tab_sans_bruit
 
 
+# Créer la matrice qui contiendra la distance entre chaque images et les autres
+def matrix_distance(number_images):
+    matrix1 = [[0] * number_images for i in range(number_images)]
+    print '--Reorganiser les images ...'
+    for i in range(0, number_images):
+        for j in range(0, number_images):
+            # calculer l'erreur entre l'image framei.jpg et l'image framej.jpg
+            m = compare_images("./frames/frame%d.jpg" % i, "./frames/frame%d.jpg" % j)
+            # enregister l'erreur dans la matrice
+            matrix1[i][j] = m
+        print '--Recherche de l`image suivante de l`image : %d' % i
+    return matrix1
+
+
+# trier les images en se basant sur la matrice
+def trier_images(matrix, number_images):
+    tab_trier = []
+    tab_trier.append(0)
+    # trier les images dans la table tab_trier
+    for i in range(1, number_images):
+        k = 1
+        ajout = False
+        # trouver l'image la l'erreur le plus faible avec l'image i, et on recupere son indice
+        ind, val = heapq.nsmallest(k, enumerate(matrix[tab_trier[i - 1]]), itemgetter(1))[-1]
+        while ajout == False:
+            # si l'image n'existe pas déja dans le tableau on l'ajoute
+            if ind not in tab_trier and ind != i:
+                tab_trier.append(ind)
+                ajout = True
+            else:
+                # si l'image existe déja dans le tableau on cherche l'image suivante avec l'erreur le plus faible
+                k += 1
+                ind, val = heapq.nsmallest(k, enumerate(matrix[tab_trier[i - 1]]), itemgetter(1))[-1]
+    return tab_trier
+
+
+# Chercher le premier frame dans le video pour reorganiser les scenes
 def trouver_premier_frame(tab_sans_bruit):
     tab_dist = []
     tab_dist.append(0)
+    # il faut chercher l'erreur le plus grand entre trois images pour reorganiser les scenes
     for i in range(1, len(tab_sans_bruit) - 1):
-        dist1 = compare_images("./frames/frame%d.jpg" % tab_sans_bruit[i - 1], "./frames/frame%d.jpg" % tab_sans_bruit[i])
-        dist2 = compare_images("./frames/frame%d.jpg" % tab_sans_bruit[i], "./frames/frame%d.jpg" % tab_sans_bruit[i + 1])
+        dist1 = compare_images("./frames/frame%d.jpg" % tab_sans_bruit[i - 1],
+                               "./frames/frame%d.jpg" % tab_sans_bruit[i])
+        dist2 = compare_images("./frames/frame%d.jpg" % tab_sans_bruit[i],
+                               "./frames/frame%d.jpg" % tab_sans_bruit[i + 1])
         tab_dist.append(abs(dist1 - dist2))
+    # recuperer l'index de l'image autour de laquelle il y'a l'erreur le plus grand
     ind, val = heapq.nlargest(1, enumerate(tab_dist), itemgetter(1))[-1]
+    # déplacer les images qui se trouve apres l'index pour organiser le video
     tab_org = tab_sans_bruit[ind + 1:len(tab_sans_bruit)] + tab_sans_bruit[0:ind + 1]
 
     return tab_org
 
 
+# recreation de video
 def recreer_video(tab_video):
     print '--Suppression de bruit ...'
+    # recuperer la table des images en supprimant les images etranges
     tab_sans_bruit = supprimer_bruit(tab_video)
     print '--Recherche de premier frame ...'
     tab_final = trouver_premier_frame(tab_sans_bruit)
@@ -84,6 +137,7 @@ def recreer_video(tab_video):
     size = None
     fourcc = cv2.cv.CV_FOURCC(*'XVID')
     vid = None
+    # recréer le video corriger avec le nom video_corrige.avi
     for i in range(0, len(tab_final) - 1):
         k = tab_final[i]
         img = imread('./frames/frame%d.jpg' % k)
@@ -99,38 +153,24 @@ def recreer_video(tab_video):
 
 
 def main():
+    # les arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("-v", "--video", required=True,
                     help="path to input video")
     args = vars(ap.parse_args())
 
+    # recuperer le nom de video
     videoPaths = args["video"]
-
+    # decouper le video en images
     decoupe_video(videoPaths)
     list = os.listdir('./frames')  # dir is your directory path
+    # calculer le nombre d'images dans le dossier frames
     number_images = len(list)
-
-    matrix1 = [[0] * number_images for i in range(number_images)]
-    tab_video = []
-    print '--Reorganiser les images ...'
-    for i in range(0, number_images):
-        for j in range(0, number_images):
-            m = compare_images("./frames/frame%d.jpg" % i, "./frames/frame%d.jpg" % j)
-            matrix1[i][j] = m
-        print '--Recherche de l`image suivante de l`image : %d' % i
-    tab_video.append(0)
-    for i in range(1, number_images):
-        k = 1
-        ajout = False
-        ind, val = heapq.nsmallest(k, enumerate(matrix1[tab_video[i - 1]]), itemgetter(1))[-1]
-        while ajout == False:
-            if ind not in tab_video and ind != i:
-                tab_video.append(ind)
-                ajout = True
-            else:
-                k += 1
-                ind, val = heapq.nsmallest(k, enumerate(matrix1[tab_video[i - 1]]), itemgetter(1))[-1]
-
+    # la matrice qui la distance entre chaque image et les autres
+    matrix1 = matrix_distance(number_images)
+    # trier les images dans le tableau tab_video
+    tab_video = trier_images(matrix1, number_images)
+    # lancer la recreation de video
     recreer_video(tab_video)
 
 
