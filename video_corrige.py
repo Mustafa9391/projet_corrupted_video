@@ -62,7 +62,7 @@ def compare_images(imageA, imageB):
 # suppression de bruit en utilisant machine learning,
 def supprimer_bruit(tab):
     # recuperer les images etranges dans la liste des images
-    tab_bruit = sample.trouver_images_bruit()
+    tab_bruit = clustering.trouver_images_bruit()
     s = set(tab_bruit)
     # enlever les images de la liste
     tab_sans_bruit = [x for x in tab if x not in s]
